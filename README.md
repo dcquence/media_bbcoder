@@ -4,3 +4,6 @@ Simply double-click the script to run, and follow the prompts.
 This requires mediainfo.exe, the CLI version, to run which can be grabbed separetly here:
 https://mediaarea.net/en/MediaInfo/Download/Windows
 Put the .exe in the same folder as the script and the template before running the script.
+
+**Sample Output:**:
+https://i.imgur.com/lLG0Gar.png
