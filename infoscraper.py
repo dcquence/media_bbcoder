@@ -63,9 +63,9 @@ def read_template_file(file_path):
 
 def main():
     tmdb_id = input("Enter TMDB movie ID (e.g., 693134): ")
-    api_key = "eb88ac5c789dc1a2d3cc6508de739f64"  # Replace "YOUR_TMDB_API_KEY" with your actual TMDB API key
-    imgur_client_id = "3c7b090eeab005b"  # Replace "YOUR_IMGUR_CLIENT_ID" with your actual Imgur client ID
-    imgur_client_secret = "89ee1a722b7e7d98dd256f7f4af76ca054ee6ed2"  # Replace "YOUR_IMGUR_CLIENT_SECRET" with your actual Imgur client secret
+    api_key = "YOUR_TMDB_API_KEY"  # Replace "YOUR_TMDB_API_KEY" with your actual TMDB API key
+    imgur_client_id = "YOUR_IMGUR_CLIENT_ID"  # Replace "YOUR_IMGUR_CLIENT_ID" with your actual Imgur client ID
+    imgur_client_secret = "YOUR_IMGUR_CLIENT_SECRET"  # Replace "YOUR_IMGUR_CLIENT_SECRET" with your actual Imgur client secret
 
     title, plot_summary, director, writers, cast, poster_url, imdb_id = get_movie_info(tmdb_id, api_key)
 
