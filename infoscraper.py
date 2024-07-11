@@ -3,6 +3,9 @@ from imgurpython import ImgurClient
 import subprocess
 import tkinter as tk
 from tkinter import filedialog
+import os
+import re
+import sys
 
 def upload_image_to_imgur(image_path, client_id, client_secret):
     client = ImgurClient(client_id, client_secret)
@@ -37,7 +40,7 @@ def get_movie_info(tmdb_id, api_key):
 
     return title, plot_summary, director, writers, cast, poster_url, imdb_id
 
-def format_bbcode(title, plot_summary, director, writers, cast, imgur_link, imdb_id, mediainfo_output):
+def format_bbcode(title, plot_summary, director, writers, cast, imgur_link, imdb_id, mediainfo_output, screenshot_links):
     bbcode = f"[center][img]{imgur_link}[/img]\n\n" if imgur_link else ""
     if imdb_id:
         imdb_link = f"https://www.imdb.com/title/{imdb_id}/"
@@ -48,7 +51,12 @@ def format_bbcode(title, plot_summary, director, writers, cast, imgur_link, imdb
     bbcode += f"[b]Writers:[/b] {', '.join(writers) if writers else 'Writers information not available'}\n\n"
     bbcode += f"[icon=cast]\n[b]Cast:[/b] {', '.join(cast) if cast else 'Cast information not available'}\n\n"
     bbcode += f"[icon=info][/center]\n\n"
-    bbcode += f"[code]{mediainfo_output}[/code]"
+    bbcode += f"[code]{mediainfo_output}[/code]\n\n"
+    
+    # Add screenshot links
+    for link in screenshot_links:
+        bbcode += f"[img]{link}[/img]\n"
+    
     return bbcode
 
 def select_video_file():
@@ -60,6 +68,45 @@ def select_video_file():
 def read_template_file(file_path):
     with open(file_path, 'r') as f:
         return f.read()
+
+def create_screenshots(video_path):
+    # Create screenshots folder
+    screenshots_folder = os.path.join(os.path.dirname(__file__), 'screenshots')
+    os.makedirs(screenshots_folder, exist_ok=True)
+
+    # Get the duration of the video in seconds
+    result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', video_path],
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    duration = float(result.stdout)
+
+    # Start taking screenshots from the 5-minute mark
+    start_time = 5 * 60  # 5 minutes in seconds
+
+    # Create screenshots every 15 minutes, maximum of 4 screenshots
+    screenshot_interval = 15 * 60  # 15 minutes in seconds
+    max_screenshots = 4
+    for i in range(start_time, min(int(duration), start_time + screenshot_interval * max_screenshots), screenshot_interval):
+        screenshot_path = os.path.join(screenshots_folder, f'screenshot_{i//screenshot_interval + 1}.jpg')
+        subprocess.run(['ffmpeg', '-ss', str(i), '-i', video_path, '-vframes', '1', '-q:v', '2', screenshot_path],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    return screenshots_folder
+
+def upload_screenshots(screenshots_folder, client_id, client_secret):
+    imgur_links = []
+    for screenshot in os.listdir(screenshots_folder):
+        screenshot_path = os.path.join(screenshots_folder, screenshot)
+        link = upload_image_to_imgur(screenshot_path, client_id, client_secret)
+        imgur_links.append(link)
+        os.remove(screenshot_path)  # Delete the screenshot file after uploading
+    return imgur_links
+
+def sanitize_filename(filename):
+    # Remove or replace invalid characters
+    sanitized = re.sub(r'[\\/:*?"<>|]', '', filename)
+    # Replace spaces with underscores
+    sanitized = "_".join(sanitized.split())
+    return sanitized
 
 def main():
     tmdb_id = input("Enter TMDB movie ID (e.g., 693134): ")
@@ -74,6 +121,7 @@ def main():
         with open(image_path, 'wb') as f:
             f.write(requests.get(poster_url).content)
         imgur_link = upload_image_to_imgur(image_path, imgur_client_id, imgur_client_secret)
+        os.remove(image_path)  # Delete the poster image file after uploading
     else:
         imgur_link = None
 
@@ -83,16 +131,26 @@ def main():
         print("No file selected. Exiting.")
         return
 
+    # Create screenshots and upload them to Imgur
+    screenshots_folder = create_screenshots(video_path)
+    screenshot_links = upload_screenshots(screenshots_folder, imgur_client_id, imgur_client_secret)
+
     # Read mediainfo template file
-    # mediainfo_template = read_template_file("template_mediainfo.txt")
     mediainfo_output = subprocess.check_output(['mediainfo', '--Inform=file://template_mediainfo.txt', video_path]).decode('utf-8')
 
-    bbcode = format_bbcode(title, plot_summary, director, writers, cast, imgur_link, imdb_id, mediainfo_output)
-    print(bbcode)
+    bbcode = format_bbcode(title, plot_summary, director, writers, cast, imgur_link, imdb_id, mediainfo_output, screenshot_links)
+
+    # Sanitize title for filename
+    sanitized_title = sanitize_filename(title)
+    output_file = os.path.join(os.path.dirname(__file__), f"{sanitized_title}.txt")
+    
+    # Save BBCode to a text file named using the sanitized movie title
+    with open(output_file, 'w') as f:
+        f.write(bbcode)
+
+    print(f"BBCode saved to {output_file}")
 
 if __name__ == "__main__":
     main()
-
-    import os; os.remove("poster.jpg")
 
 input("Press enter to exit;")
