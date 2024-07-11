@@ -16,4 +16,4 @@ Put the .exe in the same folder as the script and the template_mediainfo.txt bef
 template_mediainfo.txt is used for formatting the output and can be adjusted to your liking.
 
 **Sample Output:**:
-https://i.imgur.com/lLG0Gar.png
+https://i.imgur.com/t2Ubf2P.jpeg
