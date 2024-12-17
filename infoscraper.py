@@ -1,7 +1,7 @@
 #Movie info bbcode generator for uploads
 #Gathers info from tmdb and mediainfo, and uploads screenshots to imgur before generating final bbcode
 
-#Fixes blurriness in the opened WPF window
+#Fixes blurriness in the WPF window opened to select the video file
 import ctypes
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)  # Set DPI awareness to Per Monitor
