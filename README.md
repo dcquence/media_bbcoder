@@ -11,7 +11,7 @@ Simply double-click the script to run, and follow the prompts. The bbcode output
 
 This requires mediainfo.exe, the CLI version, to run which can be grabbed separetly here:
 https://mediaarea.net/en/MediaInfo/Download/Windows
-Put the .exe in the same folder as the script and the template_mediainfo.txt before running the script
+Put the .exe in the same folder as the script, along with template_mediainfo.txt before running the script
 
 template_mediainfo.txt is used for formatting the output and can be adjusted to your liking.
 
