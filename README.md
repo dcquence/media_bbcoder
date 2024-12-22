@@ -3,11 +3,11 @@ Simply double-click the script to run, and follow the prompts. The bbcode output
 
 **Important to edit this section of the script with your own info.**
 
-    api_key = "YOUR_TMDB_API_KEY"  # Replace "YOUR_TMDB_API_KEY" with your actual TMDB API key
+    api_key = "<YOUR_TMDB_API_KEY>"  # Replace with your actual TMDB API key
     
-    imgur_client_id = "YOUR_IMGUR_CLIENT_ID"  # Replace "YOUR_IMGUR_CLIENT_ID" with your actual Imgur client ID
+    imgur_client_id = "<YOUR_IMGUR_CLIENT_ID>"  # Replace with your actual Imgur client ID
     
-    imgur_client_secret = "YOUR_IMGUR_CLIENT_SECRET"  # Replace "YOUR_IMGUR_CLIENT_SECRET" with your actual Imgur client secret"_
+    imgur_client_secret = "<YOUR_IMGUR_CLIENT_SECRET>"  # Replace with your actual Imgur client secret"
 
 This requires mediainfo.exe, the CLI version, to run which can be grabbed separetly here:
 https://mediaarea.net/en/MediaInfo/Download/Windows
