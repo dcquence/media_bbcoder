@@ -2,6 +2,7 @@
 # Gathers info from TMDb and Mediainfo, and uploads screenshots to Imgur before generating final BBCode
 # Written by dcquence 2024
 
+# Fixes blurriness in the WPF window opened to select the video file
 import ctypes
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)  # Set DPI awareness to Per Monitor
