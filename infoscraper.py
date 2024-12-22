@@ -2,7 +2,6 @@
 # Gathers info from TMDb and Mediainfo, and uploads screenshots to Imgur before generating final BBCode
 # Written by dcquence 2024
 
-# Fixes blurriness in the WPF window opened to select the video file
 import ctypes
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)  # Set DPI awareness to Per Monitor
@@ -17,6 +16,9 @@ from tkinter import filedialog
 import os
 import re
 import sys
+
+template = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'template_mediainfo.txt')
+
 
 def upload_image_to_imgur(image_path, client_id, client_secret):
     client = ImgurClient(client_id, client_secret)
@@ -158,10 +160,48 @@ def sanitize_filename(filename):
     sanitized = "_".join(sanitized.split())
     return sanitized
 
+import re
+
 def extract_season_episode(filename):
-    match = re.search(r's(\d{2})e(\d{2})', filename, re.IGNORECASE)
+    print(f"Extracting season and episode from filename: {filename}")  # Debug print
+
+    # Explicitly match 4-digit format first (e.g., 1004 -> season 10, episode 4)
+    match = re.search(r'(\d{4})', filename)
     if match:
-        return int(match.group(1)), int(match.group(2))
+        episode_str = match.group(1)
+        if len(episode_str) == 4:
+            season = int(episode_str[:2])  # First two digits are season
+            episode = int(episode_str[2:])  # Last two digits are episode
+            print(f"Matched 4-digit format: Season {season}, Episode {episode}")  # Debug print
+            return season, episode
+
+    # If no 4-digit match, proceed to check for other formats
+    match = re.search(r'(s?(\d{1,2})[x|e](\d{2}))|(\d{3})|(\d{4})', filename, re.IGNORECASE)
+    if match:
+        print(f"Regex match: {match.groups()}")  # Debug print
+        # If match is in 's01e01' or '1x01' format
+        if match.group(2) and match.group(3):
+            season = int(match.group(2))  # Second group is the season
+            episode = int(match.group(3))  # Third group is the episode
+            return season, episode
+        
+        # If match is in '101' or '102' format (i.e., season 1, episode 1)
+        elif match.group(4):
+            episode_str = match.group(4)
+            if len(episode_str) == 3:
+                season = int(episode_str[0])  # First digit is season
+                episode = int(episode_str[1:])  # Last two digits are episode
+                return season, episode
+
+        # If match is in '1004' format (i.e., season 10, episode 4)
+        elif match.group(5):
+            episode_str = match.group(5)
+            if len(episode_str) == 4:
+                season = int(episode_str[:2])  # First two digits are season
+                episode = int(episode_str[2:])  # Last two digits are episode
+                return season, episode
+
+    # Return None if no match is found
     return None, None
 
 def main():
@@ -223,7 +263,7 @@ def main():
         screenshot_links = upload_screenshots(screenshots_folder, imgur_client_id, imgur_client_secret)
 
         print("Fetching MediaInfo...")
-        mediainfo_output = subprocess.check_output(['mediainfo', video_path], text=True)
+        mediainfo_output = subprocess.check_output(['mediainfo', '--Inform=file://' + template, video_path], text=True)
 
         print("Formatting BBCode...")
         bbcode = format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgur_link, mediainfo_output, screenshot_links, media_type == 'movie', episode_info)
