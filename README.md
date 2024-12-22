@@ -1,4 +1,4 @@
-Python script for inputing a movie's tmdb page number and a video file that outputs bbcode generated for an info page.
+Python script for inputing a movie or tv show's tmdb page number and a video file that outputs bbcode generated for an info page.
 Simply double-click the script to run, and follow the prompts. The bbcode output is dumped to a txt file in the same folder as the script, using the name of the movie.
 
 **Important to edit this section of the script with your own info.**
