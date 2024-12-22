@@ -153,9 +153,9 @@ def main():
             return
 
         tmdb_id = input("Enter TMDB ID: ")
-        api_key = "<YourAPIKey"  # Replace with your actual TMDB API key
-        imgur_client_id = "<YourAPIKey>"  # Replace with your actual Imgur client ID
-        imgur_client_secret = "<YourAPIKey>"  # Replace with your actual Imgur client secret
+        api_key = "<YOUR_TMDB_API_KEY"  # Replace with your actual TMDB API key
+        imgur_client_id = "<YOUR_IMGUR_CLIENT_ID>"  # Replace with your actual Imgur client ID
+        imgur_client_secret = "<YOUR_IMGUR_CLIENT_SECRET>"  # Replace with your actual Imgur client secret
 
         if media_type == 'movie':
             print("Fetching movie info...")
