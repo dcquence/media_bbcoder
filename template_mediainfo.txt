@@ -1,5 +1,5 @@
 General;"
-Name..................: %FileName%
+Name..................: %CompleteName%
 Size..................: %FileSize/String4%
 Overall Bitrate.......: %OverallBitRate/String%
 Frame Rate............: %FrameRate/String%
@@ -24,6 +24,8 @@ Codec ID..............: %CodecID%
 Duration..............: %Duration/String1%
 Bit Rate..............: %BitRate/String%
 Bit Depth.............: %BitDepth/String%
+Color Space...........: %ColorSpace%
+HDR Format............: %HDR_Format_Commercial%
 Framerate.............: %FrameRate% fps
 Frame Rate Mode.......: %FrameRate_Mode%"\n
 
