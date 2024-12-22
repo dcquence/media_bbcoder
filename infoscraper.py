@@ -51,7 +51,7 @@ def get_movie_info(tmdb_id, api_key):
 
     return title, plot_summary, director, writers, cast, poster_url, imdb_id
 
-def get_tv_series_info(tmdb_id, api_key):
+def get_tv_series_info(tmdb_id, api_key, season=None, episode=None):
     # Fetch basic TV series info
     url = f"https://api.themoviedb.org/3/tv/{tmdb_id}?api_key={api_key}"
     response = requests.get(url)
@@ -73,11 +73,26 @@ def get_tv_series_info(tmdb_id, api_key):
     poster_path = data.get('poster_path')
     poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
 
-    return title, plot_summary, creators, cast, poster_url
+    episode_info = None
+    if season is not None and episode is not None:
+        # Fetch episode details
+        episode_url = f"https://api.themoviedb.org/3/tv/{tmdb_id}/season/{season}/episode/{episode}?api_key={api_key}"
+        episode_response = requests.get(episode_url)
+        if episode_response.status_code == 200:
+            episode_data = episode_response.json()
+            episode_info = {
+                'title': episode_data.get('name', 'Episode title not available'),
+                'plot': episode_data.get('overview', 'Episode plot not available')
+            }
 
-def format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgur_link, mediainfo_output, screenshot_links, is_movie):
+    return title, plot_summary, creators, cast, poster_url, episode_info
+
+def format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgur_link, mediainfo_output, screenshot_links, is_movie, episode_info=None):
     bbcode = f"[center][img]{imgur_link}[/img]\n\n" if imgur_link else ""
     bbcode += f"[b]Title:[/b] {title}\n\n"
+    if episode_info:
+        bbcode += f"[b]Episode Title:[/b] {episode_info['title']}\n\n"
+        bbcode += f"[b]Episode Plot:[/b] {episode_info['plot']}\n\n"
     bbcode += f"[icon=plot]\n[b]Plot:[/b] {plot_summary}\n\n"
     if is_movie:
         bbcode += f"[b]Director:[/b] {creators_or_director}\n\n"
@@ -143,6 +158,12 @@ def sanitize_filename(filename):
     sanitized = "_".join(sanitized.split())
     return sanitized
 
+def extract_season_episode(filename):
+    match = re.search(r's(\d{2})e(\d{2})', filename, re.IGNORECASE)
+    if match:
+        return int(match.group(1)), int(match.group(2))
+    return None, None
+
 def main():
     try:
         print("Starting Media Info BBCode Generator...")
@@ -157,13 +178,31 @@ def main():
         imgur_client_id = "<YOUR_IMGUR_CLIENT_ID>"  # Replace with your actual Imgur client ID
         imgur_client_secret = "<YOUR_IMGUR_CLIENT_SECRET>"  # Replace with your actual Imgur client secret
 
+        video_path = select_video_file()
+
         if media_type == 'movie':
             print("Fetching movie info...")
             title, plot_summary, director, writers, cast, poster_url, imdb_id = get_movie_info(tmdb_id, api_key)
             creators_or_director = director
+            episode_info = None
         else:
+            tv_scope = input("Is this for the entire series or a single episode? (series/episode): ").strip().lower()
+            if tv_scope not in ['series', 'episode']:
+                print("Invalid choice. Please enter 'series' or 'episode'.")
+                input("Press Enter to exit.")
+                return
+
+            if tv_scope == 'episode':
+                season, episode = extract_season_episode(os.path.basename(video_path))
+                if not season or not episode:
+                    print("Failed to extract season and episode from filename.")
+                    input("Press Enter to exit.")
+                    return
+            else:
+                season, episode = None, None
+
             print("Fetching TV series info...")
-            title, plot_summary, creators, cast, poster_url = get_tv_series_info(tmdb_id, api_key)
+            title, plot_summary, creators, cast, poster_url, episode_info = get_tv_series_info(tmdb_id, api_key, season, episode)
             creators_or_director = creators
             writers = None
             imdb_id = None
@@ -178,7 +217,6 @@ def main():
         else:
             imgur_link = None
 
-        video_path = select_video_file()
         print("Creating screenshots...")
         screenshots_folder = create_screenshots(video_path)
         print("Uploading screenshots to Imgur...")
@@ -188,7 +226,7 @@ def main():
         mediainfo_output = subprocess.check_output(['mediainfo', video_path], text=True)
 
         print("Formatting BBCode...")
-        bbcode = format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgur_link, mediainfo_output, screenshot_links, media_type == 'movie')
+        bbcode = format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgur_link, mediainfo_output, screenshot_links, media_type == 'movie', episode_info)
 
         output_filename = sanitize_filename(title) + ".txt"
         with open(output_filename, 'w') as f:
