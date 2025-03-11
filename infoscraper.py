@@ -5,7 +5,7 @@
 # Fixes blurriness in the WPF window opened to select the video file
 import ctypes
 try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)  # Set DPI awareness to Per Monitor
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
 except Exception:
     pass
 
