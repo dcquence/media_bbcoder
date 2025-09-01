@@ -1,27 +1,23 @@
 General;"
-Name..................: %CompleteName%
+General:
+Name..................: %FileNameExtension%
 Size..................: %FileSize/String4%
 Overall Bitrate.......: %OverallBitRate/String%
 Frame Rate............: %FrameRate/String%
 Format................: %Format%
-Format Version........: %Format_Version%
 Duration..............: %Duration/String3%
 Video Codecs..........: %Video_Format_WithHint_List%
 Audio Codecs..........: %Audio_Format_WithHint_List%
-Text Codecs...........: %Text_Format_WithHint_List%
-Video Count...........: %VideoCount%
-Audio Count...........: %AudioCount%
-Text Count............: %TextCount%
 Encoding Application..: %Encoded_Application/String%
 Encoding Library......: %Encoded_Library/String%\n"
 
 Video;"
+Video:
 Format................: %Format_Commercial% %Format/Info%
 Resolution............: %Width%x%Height%
 Aspect Ratio..........: %DisplayAspectRatio/String%
 Codec.................: %Codec/String%%Format_Profile%
 Codec ID..............: %CodecID%
-Duration..............: %Duration/String1%
 Bit Rate..............: %BitRate/String%
 Bit Depth.............: %BitDepth/String%
 Color Space...........: %ColorSpace%
@@ -30,20 +26,12 @@ Framerate.............: %FrameRate% fps
 Frame Rate Mode.......: %FrameRate_Mode%"\n
 
 Audio;"
+Audio:
 Audio.................: %Language/String%
 Format................: %Format_Commercial% %Format/Info%
-Duration..............: %Duration/String1%
-Frame Rate............: %FrameRate%
 Bitrate...............: %BitRate/String%
-Bitrate Mode..........: %BitRate_Mode%
-Channel Layout........: %ChannelPositions%
 Channels..............: %Channel(s)/String%"\n
 
 Text;"
-Stream Kind...........: %StreamKind/String%
-ID....................: %ID%
-Format................: %Format_Commercial% %Format/Info%
-Codec ID..............: %CodecID%
-Default...............: %Default%
-Forced................: %Forced%
-Language..............: %Language/String%"\n
+Subtitles:
+Language..............: %Language/String%"
