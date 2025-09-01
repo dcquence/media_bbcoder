@@ -94,8 +94,11 @@ def format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgu
     bbcode += f"[icon=info][/center]\n\n"
     bbcode += f"[code]{mediainfo_output}[/code]\n\n"
 
-    for link in screenshot_links:
-        bbcode += f"[img]{link}[/img]\n"
+    if screenshot_links:
+        bbcode += "[center]\n"
+        for link in screenshot_links:
+            bbcode += f"[img]{link}[/img]\n"
+        bbcode += "[/center]\n"
 
     return bbcode
 
@@ -256,3 +259,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
