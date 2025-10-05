@@ -1,7 +1,7 @@
 Python script for inputing a movie or tv show's tmdb page number and a video file that outputs bbcode generated for an info page.
 The bbcode output is dumped to a txt file in the same folder as the script, using the title.
 
-**Important to edit this section of the script with your own info.**
+**Important to edit this with your own info.**
 
     api_key = "<Your API Key>"
     
