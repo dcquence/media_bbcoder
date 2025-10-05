@@ -1,6 +1,6 @@
 # Media Info BBCode Generator for Uploads
-# Gathers info from TMDb and Mediainfo, and uploads screenshots to Imgur before generating final BBCode
-# Written by dcquence 2024
+# Gathers info from TMDb and Mediainfo, and calls imgs.py to upload screenshots and poster
+# Written by dcquence 2024, modified to use imgs.py
 
 import ctypes
 try:
@@ -9,56 +9,66 @@ except Exception:
     pass
 
 import requests
-from imgurpython import ImgurClient
 import subprocess
 import tkinter as tk
 from tkinter import filedialog
 import os
 import re
 import sys
+import json
 
 template = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'template_mediainfo.txt')
 
-def upload_image_to_imgur(image_path, client_id, client_secret):
-    client = ImgurClient(client_id, client_secret)
-    image = client.upload_from_path(image_path, anon=True)
-    return image['link']
+def upload_images_via_imgs_py(image_paths, cookies_file="cookies.json"):
+    """
+    Calls imgs.py with the list of image paths and returns a list of URLs from its output.
+    Works with the current imgs.py output format: 'filename: URL'
+    """
+    import subprocess
+
+    cmd = ["python", "imgs.py", "-c", cookies_file] + image_paths
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        output_lines = result.stdout.strip().splitlines()
+        
+        urls = []
+        for line in output_lines:
+            if ": " in line:
+                urls.append(line.split(": ", 1)[1].strip())
+        
+        if len(urls) != len(image_paths):
+            print(f"Warning: number of returned URLs ({len(urls)}) does not match number of images ({len(image_paths)})")
+            urls.extend([None] * (len(image_paths) - len(urls)))
+
+        return urls
+    except Exception as e:
+        print(f"Error uploading images via imgs.py: {e}")
+        return [None] * len(image_paths)
 
 def get_movie_info(tmdb_id, api_key):
     url = f"https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={api_key}"
-    response = requests.get(url)
-    data = response.json()
+    data = requests.get(url).json()
 
     title = data.get('title', 'Title not available')
     plot_summary = data.get('overview', 'Plot summary not available')
 
-    credits_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}/credits?api_key={api_key}"
-    credits_response = requests.get(credits_url)
-    credits_data = credits_response.json()
-
+    credits_data = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}/credits?api_key={api_key}").json()
     director = next((member['name'] for member in credits_data['crew'] if member['job'] == 'Director'), 'Director information not available')
     writers = [member['name'] for member in credits_data['crew'] if member['department'] == 'Writing']
-    cast = [actor['name'] for actor in credits_data['cast'][:5]]  # Get top 5 cast members
+    cast = [actor['name'] for actor in credits_data['cast'][:5]]
 
     poster_path = data.get('poster_path')
     poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
 
     imdb_id = data.get('imdb_id')
-
     return title, plot_summary, director, writers, cast, poster_url, imdb_id
 
 def get_tv_series_info(tmdb_id, api_key, season=None, episode=None):
-    url = f"https://api.themoviedb.org/3/tv/{tmdb_id}?api_key={api_key}"
-    response = requests.get(url)
-    data = response.json()
-
+    data = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}?api_key={api_key}").json()
     title = data.get('name', 'Title not available')
     plot_summary = data.get('overview', 'Plot summary not available')
 
-    credits_url = f"https://api.themoviedb.org/3/tv/{tmdb_id}/credits?api_key={api_key}"
-    credits_response = requests.get(credits_url)
-    credits_data = credits_response.json()
-
+    credits_data = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/credits?api_key={api_key}").json()
     creators = [creator['name'] for creator in data.get('created_by', [])]
     cast = [actor['name'] for actor in credits_data['cast'][:5]]
 
@@ -67,19 +77,16 @@ def get_tv_series_info(tmdb_id, api_key, season=None, episode=None):
 
     episode_info = None
     if season is not None and episode is not None:
-        episode_url = f"https://api.themoviedb.org/3/tv/{tmdb_id}/season/{season}/episode/{episode}?api_key={api_key}"
-        episode_response = requests.get(episode_url)
-        if episode_response.status_code == 200:
-            episode_data = episode_response.json()
-            episode_info = {
-                'title': episode_data.get('name', 'Episode title not available'),
-                'plot': episode_data.get('overview', 'Episode plot not available')
-            }
+        episode_data = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/season/{season}/episode/{episode}?api_key={api_key}").json()
+        episode_info = {
+            'title': episode_data.get('name', 'Episode title not available'),
+            'plot': episode_data.get('overview', 'Episode plot not available')
+        }
 
     return title, plot_summary, creators, cast, poster_url, episode_info
 
-def format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgur_link, mediainfo_output, screenshot_links, is_movie, episode_info=None):
-    bbcode = f"[center][img]{imgur_link}[/img]\n\n" if imgur_link else ""
+def format_bbcode(title, plot_summary, creators_or_director, writers, cast, poster_link, mediainfo_output, screenshot_links, is_movie, episode_info=None):
+    bbcode = f"[center][img]{poster_link}[/img]\n\n" if poster_link else ""
     bbcode += f"[b]Title:[/b] {title}\n\n"
     if episode_info:
         bbcode += f"[b]Episode Title:[/b] {episode_info['title']}\n\n"
@@ -105,83 +112,52 @@ def format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgu
 def select_video_file():
     root = tk.Tk()
     root.withdraw()
-    file_path = filedialog.askopenfilename()
-    return file_path
-
-def read_template_file(file_path):
-    with open(file_path, 'r') as f:
-        return f.read()
+    return filedialog.askopenfilename()
 
 def create_screenshots(video_path):
     screenshots_folder = os.path.join(os.path.dirname(__file__), 'screenshots')
     os.makedirs(screenshots_folder, exist_ok=True)
 
-    result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', video_path],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    duration = float(result.stdout)
+    duration = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                                     '-of', 'default=noprint_wrappers=1:nokey=1', video_path],
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout)
 
     start_time = 5 * 60
-
     screenshot_interval = 5 * 60
     max_screenshots = 4
+
+    screenshot_paths = []
     for i in range(start_time, min(int(duration), start_time + screenshot_interval * max_screenshots), screenshot_interval):
         screenshot_path = os.path.join(screenshots_folder, f'screenshot_{i//screenshot_interval + 1}.jpg')
         subprocess.run(['ffmpeg', '-ss', str(i), '-i', video_path, '-vframes', '1', '-q:v', '2', screenshot_path],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        screenshot_paths.append(screenshot_path)
 
-    return screenshots_folder
-
-def upload_screenshots(screenshots_folder, client_id, client_secret):
-    imgur_links = []
-    for screenshot in os.listdir(screenshots_folder):
-        screenshot_path = os.path.join(screenshots_folder, screenshot)
-        link = upload_image_to_imgur(screenshot_path, client_id, client_secret)
-        imgur_links.append(link)
-        os.remove(screenshot_path)
-    return imgur_links
+    return screenshot_paths
 
 def sanitize_filename(filename):
     sanitized = re.sub(r'[\\/:*?"<>|]', '', filename)
-    sanitized = "_".join(sanitized.split())
-    return sanitized
-
-import re
+    return "_".join(sanitized.split())
 
 def extract_season_episode(filename):
     filename = re.sub(r'(1080p|720p)', '', filename, flags=re.IGNORECASE)
-    print(f"Extracting season and episode from filename: {filename}")
-
     match = re.search(r'(\d{4})', filename)
     if match:
         episode_str = match.group(1)
         if len(episode_str) == 4:
-            season = int(episode_str[:2])
-            episode = int(episode_str[2:])
-            print(f"Matched 4-digit format: Season {season}, Episode {episode}")
-            return season, episode
-
+            return int(episode_str[:2]), int(episode_str[2:])
     match = re.search(r'(s?(\d{1,2})[x|e](\d{2}))|(\d{3})|(\d{4})', filename, re.IGNORECASE)
     if match:
-        print(f"Regex match: {match.groups()}") 
         if match.group(2) and match.group(3):
-            season = int(match.group(2))
-            episode = int(match.group(3))
-            return season, episode
-        
+            return int(match.group(2)), int(match.group(3))
         elif match.group(4):
-            episode_str = match.group(4)
-            if len(episode_str) == 3:
-                season = int(episode_str[0])
-                episode = int(episode_str[1:])
-                return season, episode
-
+            ep = match.group(4)
+            if len(ep) == 3:
+                return int(ep[0]), int(ep[1:])
         elif match.group(5):
-            episode_str = match.group(5)
-            if len(episode_str) == 4:
-                season = int(episode_str[:2])
-                episode = int(episode_str[2:])
-                return season, episode
-
+            ep = match.group(5)
+            if len(ep) == 4:
+                return int(ep[:2]), int(ep[2:])
     return None, None
 
 def main():
@@ -190,73 +166,65 @@ def main():
         media_type = input("Is this for a movie or TV show? (movie/tv): ").strip().lower()
         if media_type not in ['movie', 'tv']:
             print("Invalid choice. Please enter 'movie' or 'tv'.")
-            input("Press Enter to exit.")
             return
 
         tmdb_id = input("Enter TMDB ID: ")
-        api_key = "<YOUR_TMDB_API_KEY"  # Replace with your actual TMDB API key
-        imgur_client_id = "<YOUR_IMGUR_CLIENT_ID>"  # Replace with your actual Imgur client ID
-        imgur_client_secret = "<YOUR_IMGUR_CLIENT_SECRET>"  # Replace with your actual Imgur client secret
+        api_key = "<Your API Key>"
 
         video_path = select_video_file()
 
         if media_type == 'movie':
-            print("Fetching movie info...")
-            title, plot_summary, director, writers, cast, poster_url, tmdb_id = get_movie_info(tmdb_id, api_key)
+            title, plot_summary, director, writers, cast, poster_url, _ = get_movie_info(tmdb_id, api_key)
             creators_or_director = director
             episode_info = None
         else:
             tv_scope = input("Is this for the entire series or a single episode? (series/episode): ").strip().lower()
-            if tv_scope not in ['series', 'episode']:
-                print("Invalid choice. Please enter 'series' or 'episode'.")
-                input("Press Enter to exit.")
-                return
-
             if tv_scope == 'episode':
                 season, episode = extract_season_episode(os.path.basename(video_path))
                 if not season or not episode:
                     print("Failed to extract season and episode from filename.")
-                    input("Press Enter to exit.")
                     return
             else:
                 season, episode = None, None
-
-            print("Fetching TV series info...")
             title, plot_summary, creators, cast, poster_url, episode_info = get_tv_series_info(tmdb_id, api_key, season, episode)
             creators_or_director = creators
             writers = None
-            tmdb_id = None
 
+        # Collect images to upload
+        image_paths = []
         if poster_url:
-            print("Downloading poster...")
-            image_path = "poster.jpg"
-            with open(image_path, 'wb') as f:
+            poster_path = "poster.jpg"
+            with open(poster_path, 'wb') as f:
                 f.write(requests.get(poster_url).content)
-            imgur_link = upload_image_to_imgur(image_path, imgur_client_id, imgur_client_secret)
-            os.remove(image_path)
-        else:
-            imgur_link = None
+            image_paths.append(poster_path)
 
-        print("Creating screenshots...")
-        screenshots_folder = create_screenshots(video_path)
-        print("Uploading screenshots to Imgur...")
-        screenshot_links = upload_screenshots(screenshots_folder, imgur_client_id, imgur_client_secret)
+        screenshot_paths = create_screenshots(video_path)
+        image_paths.extend(screenshot_paths)
 
-        print("Fetching MediaInfo...")
+        # Upload images via imgs.py
+        print("Uploading images via imgs.py...")
+        image_urls = upload_images_via_imgs_py(image_paths)
+        poster_link = image_urls[0] if poster_url else None
+        screenshot_links = image_urls[1:] if poster_url else image_urls
+
+        # Cleanup local images
+        for path in image_paths:
+            if os.path.exists(path):
+                os.remove(path)
+
+        # Fetch MediaInfo
         mediainfo_output = subprocess.check_output(['mediainfo', '--Inform=file://' + template, video_path], text=True)
 
-        print("Formatting BBCode...")
-        bbcode = format_bbcode(title, plot_summary, creators_or_director, writers, cast, imgur_link, mediainfo_output, screenshot_links, media_type == 'movie', episode_info)
+        bbcode = format_bbcode(title, plot_summary, creators_or_director, writers, cast, poster_link, mediainfo_output, screenshot_links, media_type=='movie', episode_info)
 
         output_filename = sanitize_filename(title) + ".txt"
         with open(output_filename, 'w', encoding='utf-8') as f:
             f.write(bbcode)
 
         print(f"BBCode saved to {output_filename}")
+
     except Exception as e:
         print(f"An error occurred: {e}")
-        input("Press Enter to exit.")
 
 if __name__ == "__main__":
     main()
-
