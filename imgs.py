@@ -1,3 +1,6 @@
+# Uploads screenshots and poster to speed CDN using API
+# Written by PhlegethonAcheron
+
 import argparse
 import glob
 import sys
@@ -173,3 +176,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
