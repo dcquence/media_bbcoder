@@ -1,6 +1,6 @@
 # Media Info BBCode Generator for Uploads
 # Gathers info from TMDb and Mediainfo, and calls imgs.py to upload screenshots and poster
-# Written by dcquence 2024, modified to use imgs.py
+# Written by dcquence 2024, modified to use imgs.py from PhlegethonAcheron
 
 import ctypes
 try:
@@ -20,10 +20,6 @@ import json
 template = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'template_mediainfo.txt')
 
 def upload_images_via_imgs_py(image_paths, cookies_file="cookies.json"):
-    """
-    Calls imgs.py with the list of image paths and returns a list of URLs from its output.
-    Works with the current imgs.py output format: 'filename: URL'
-    """
     import subprocess
 
     cmd = ["python", "imgs.py", "-c", cookies_file] + image_paths
@@ -228,3 +224,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
