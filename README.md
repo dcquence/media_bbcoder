@@ -5,10 +5,6 @@ The bbcode output is dumped to a txt file in the same folder as the script, usin
 
     api_key = "<YOUR_TMDB_API_KEY>"  # Replace with your actual TMDB API key
     
-    imgur_client_id = "<YOUR_IMGUR_CLIENT_ID>"  # Replace with your actual Imgur client ID
-    
-    imgur_client_secret = "<YOUR_IMGUR_CLIENT_SECRET>"  # Replace with your actual Imgur client secret"
-
 This requires mediainfo.exe, the CLI version, to run which can be grabbed separetly here:
 https://mediaarea.net/en/MediaInfo/Download/Windows
 Put the .exe in the same folder as the script, along with template_mediainfo.txt before running the script
