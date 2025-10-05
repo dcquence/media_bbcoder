@@ -12,6 +12,7 @@ Put the .exe in the same folder as the script, along with template_mediainfo.txt
 template_mediainfo.txt is used for formatting the output and can be adjusted to your liking.
 
 imgs.py script must be in the same folder as infoscraper.py along with the cookies.json file containing your info in the format of:
+    
     {
       "inSpeed_chatKey": "...........",
       "inSpeed_speedian": "...........",
