@@ -18,4 +18,4 @@ imgs.py script must be in the same folder as infoscraper.py along with the cooki
       "cf_clearance": "..........."
     }
 
-code for imgs.py script is using code from PhlegethonAcheron's script here https://gist.github.com/PhlegethonAcheron/7e35933adb9a7fbc247c91b8455b59d8
+code for imgs.py script is from PhlegethonAcheron's script here https://gist.github.com/PhlegethonAcheron/7e35933adb9a7fbc247c91b8455b59d8
