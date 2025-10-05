@@ -14,9 +14,8 @@ template_mediainfo.txt is used for formatting the output and can be adjusted to 
 imgs.py script must be in the same folder as infoscraper.py along with the cookies.json file containing your info in the format of:
     
     {
-      "inSpeed_chatKey": "...........",
       "inSpeed_speedian": "...........",
-      "cf_clearance": "...........",
+      "cf_clearance": "..........."
     }
 
 code for imgs.py script is using code from PhlegethonAcheron's script here https://gist.github.com/PhlegethonAcheron/7e35933adb9a7fbc247c91b8455b59d8
