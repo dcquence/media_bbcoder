@@ -3,7 +3,7 @@ The bbcode output is dumped to a txt file in the same folder as the script, usin
 
 **Important to edit this section of the script with your own info.**
 
-    api_key = "<YOUR_TMDB_API_KEY>"  # Replace with your actual TMDB API key
+    api_key = "<Your API Key>"
     
 This requires mediainfo.exe, the CLI version, to run which can be grabbed separetly here:
 https://mediaarea.net/en/MediaInfo/Download/Windows
