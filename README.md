@@ -1,8 +1,14 @@
 Python script for inputing a movie or tv show's tmdb page number and a video file that outputs bbcode generated for an info page.
 
-**Important to edit this with your own info.**
+**Important to edit these with your key and announce URL.**
 
     api_key = "<Your API Key>"
+
+    createtorrent_cmd = [
+            "python", "createtorrent.py", "-P", "--announce",
+    ---->>  "<Tracker Announce URL>",
+            video_folder, "--output", output_path
+        ]
     
 This requires mediainfo.exe, the CLI version, to run which can be grabbed separetly here:
 https://mediaarea.net/en/MediaInfo/Download/Windows
