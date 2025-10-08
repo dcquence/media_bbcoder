@@ -4,6 +4,8 @@ Python script for inputing a movie or tv show's tmdb page number and a video fil
 
     api_key = "<Your API Key>"
 
+And
+
     createtorrent_cmd = [
             "python", "createtorrent.py", "-P", "--announce",
             "<Tracker Announce URL>",
