@@ -6,7 +6,7 @@ Python script for inputing a movie or tv show's tmdb page number and a video fil
 
     createtorrent_cmd = [
             "python", "createtorrent.py", "-P", "--announce",
-    ---->>  "<Tracker Announce URL>",
+            **"<Tracker Announce URL>",**
             video_folder, "--output", output_path
         ]
     
