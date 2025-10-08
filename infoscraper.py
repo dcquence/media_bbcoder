@@ -1,6 +1,6 @@
 # Media Info BBCode Generator for Uploads
 # Gathers info from TMDb and Mediainfo, and calls imgs.py to upload screenshots and poster
-# Written by dcquence 2024, modified to use imgs.py from PhlegethonAcheron
+# Written by dcquence
 
 import ctypes
 try:
@@ -21,21 +21,17 @@ template = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'template_me
 
 def upload_images_via_imgs_py(image_paths, cookies_file="cookies.json"):
     import subprocess
-
     cmd = ["python", "imgs.py", "-c", cookies_file] + image_paths
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         output_lines = result.stdout.strip().splitlines()
-        
         urls = []
         for line in output_lines:
             if ": " in line:
                 urls.append(line.split(": ", 1)[1].strip())
-        
         if len(urls) != len(image_paths):
             print(f"Warning: number of returned URLs ({len(urls)}) does not match number of images ({len(image_paths)})")
             urls.extend([None] * (len(image_paths) - len(urls)))
-
         return urls
     except Exception as e:
         print(f"Error uploading images via imgs.py: {e}")
@@ -44,18 +40,14 @@ def upload_images_via_imgs_py(image_paths, cookies_file="cookies.json"):
 def get_movie_info(tmdb_id, api_key):
     url = f"https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={api_key}"
     data = requests.get(url).json()
-
     title = data.get('title', 'Title not available')
     plot_summary = data.get('overview', 'Plot summary not available')
-
     credits_data = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}/credits?api_key={api_key}").json()
-    director = next((member['name'] for member in credits_data['crew'] if member['job'] == 'Director'), 'Director information not available')
-    writers = [member['name'] for member in credits_data['crew'] if member['department'] == 'Writing']
-    cast = [actor['name'] for actor in credits_data['cast'][:5]]
-
+    director = next((m['name'] for m in credits_data['crew'] if m['job'] == 'Director'), 'Director information not available')
+    writers = [m['name'] for m in credits_data['crew'] if m['department'] == 'Writing']
+    cast = [a['name'] for a in credits_data['cast'][:5]]
     poster_path = data.get('poster_path')
     poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
-
     imdb_id = data.get('imdb_id')
     return title, plot_summary, director, writers, cast, poster_url, imdb_id
 
@@ -63,14 +55,11 @@ def get_tv_series_info(tmdb_id, api_key, season=None, episode=None):
     data = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}?api_key={api_key}").json()
     title = data.get('name', 'Title not available')
     plot_summary = data.get('overview', 'Plot summary not available')
-
     credits_data = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/credits?api_key={api_key}").json()
-    creators = [creator['name'] for creator in data.get('created_by', [])]
-    cast = [actor['name'] for actor in credits_data['cast'][:5]]
-
+    creators = [c['name'] for c in data.get('created_by', [])]
+    cast = [a['name'] for a in credits_data['cast'][:5]]
     poster_path = data.get('poster_path')
     poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
-
     episode_info = None
     if season is not None and episode is not None:
         episode_data = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/season/{season}/episode/{episode}?api_key={api_key}").json()
@@ -78,11 +67,17 @@ def get_tv_series_info(tmdb_id, api_key, season=None, episode=None):
             'title': episode_data.get('name', 'Episode title not available'),
             'plot': episode_data.get('overview', 'Episode plot not available')
         }
+    imdb_id = data.get('external_ids', {}).get('imdb_id') if 'external_ids' in data else None
+    return title, plot_summary, creators, cast, poster_url, episode_info, imdb_id
 
-    return title, plot_summary, creators, cast, poster_url, episode_info
-
-def format_bbcode(title, plot_summary, creators_or_director, writers, cast, poster_link, mediainfo_output, screenshot_links, is_movie, episode_info=None):
-    bbcode = f"[center][img]{poster_link}[/img]\n\n" if poster_link else ""
+def format_bbcode(title, plot_summary, creators_or_director, writers, cast, poster_link, mediainfo_output,
+                  screenshot_links, is_movie, episode_info=None, imdb_id=None):
+    bbcode = "[center]"
+    if poster_link:
+        bbcode += f"[img]{poster_link}[/img]\n\n"
+        if imdb_id:
+            imdb_url = f"https://www.imdb.com/title/{imdb_id}/"
+            bbcode += f"{imdb_url}\n\n"
     bbcode += f"[b]Title:[/b] {title}\n\n"
     if episode_info:
         bbcode += f"[b]Episode Title:[/b] {episode_info['title']}\n\n"
@@ -94,15 +89,13 @@ def format_bbcode(title, plot_summary, creators_or_director, writers, cast, post
     else:
         bbcode += f"[b]Creators:[/b] {', '.join(creators_or_director) if creators_or_director else 'Creators information not available'}\n\n"
     bbcode += f"[icon=cast]\n[b]Cast:[/b] {', '.join(cast) if cast else 'Cast information not available'}\n\n"
-    bbcode += f"[icon=info][/center]\n\n"
+    bbcode += "[icon=info][/center]\n\n"
     bbcode += f"[code]{mediainfo_output}[/code]\n\n"
-
     if screenshot_links:
         bbcode += "[center]\n"
         for link in screenshot_links:
             bbcode += f"[img]{link}[/img]\n"
         bbcode += "[/center]\n"
-
     return bbcode
 
 def select_video_file():
@@ -113,22 +106,18 @@ def select_video_file():
 def create_screenshots(video_path):
     screenshots_folder = os.path.join(os.path.dirname(__file__), 'screenshots')
     os.makedirs(screenshots_folder, exist_ok=True)
-
     duration = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
                                      '-of', 'default=noprint_wrappers=1:nokey=1', video_path],
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout)
-
     start_time = 5 * 60
     screenshot_interval = 5 * 60
     max_screenshots = 4
-
     screenshot_paths = []
     for i in range(start_time, min(int(duration), start_time + screenshot_interval * max_screenshots), screenshot_interval):
         screenshot_path = os.path.join(screenshots_folder, f'screenshot_{i//screenshot_interval + 1}.jpg')
         subprocess.run(['ffmpeg', '-ss', str(i), '-i', video_path, '-vframes', '1', '-q:v', '2', screenshot_path],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         screenshot_paths.append(screenshot_path)
-
     return screenshot_paths
 
 def sanitize_filename(filename):
@@ -137,11 +126,6 @@ def sanitize_filename(filename):
 
 def extract_season_episode(filename):
     filename = re.sub(r'(1080p|720p)', '', filename, flags=re.IGNORECASE)
-    match = re.search(r'(\d{4})', filename)
-    if match:
-        episode_str = match.group(1)
-        if len(episode_str) == 4:
-            return int(episode_str[:2]), int(episode_str[2:])
     match = re.search(r'(s?(\d{1,2})[x|e](\d{2}))|(\d{3})|(\d{4})', filename, re.IGNORECASE)
     if match:
         if match.group(2) and match.group(3):
@@ -165,12 +149,13 @@ def main():
             return
 
         tmdb_id = input("Enter TMDB ID: ")
-        api_key = "<Your API Key>"
+        api_key = "<Your API Key"
 
         video_path = select_video_file()
+        video_folder = os.path.dirname(video_path)
 
         if media_type == 'movie':
-            title, plot_summary, director, writers, cast, poster_url, _ = get_movie_info(tmdb_id, api_key)
+            title, plot_summary, director, writers, cast, poster_url, imdb_id = get_movie_info(tmdb_id, api_key)
             creators_or_director = director
             episode_info = None
         else:
@@ -182,7 +167,7 @@ def main():
                     return
             else:
                 season, episode = None, None
-            title, plot_summary, creators, cast, poster_url, episode_info = get_tv_series_info(tmdb_id, api_key, season, episode)
+            title, plot_summary, creators, cast, poster_url, episode_info, imdb_id = get_tv_series_info(tmdb_id, api_key, season, episode)
             creators_or_director = creators
             writers = None
 
@@ -208,20 +193,38 @@ def main():
             if os.path.exists(path):
                 os.remove(path)
 
-        # Fetch MediaInfo
         mediainfo_output = subprocess.check_output(['mediainfo', '--Inform=file://' + template, video_path], text=True)
 
-        bbcode = format_bbcode(title, plot_summary, creators_or_director, writers, cast, poster_link, mediainfo_output, screenshot_links, media_type=='movie', episode_info)
+        bbcode = format_bbcode(
+            title, plot_summary, creators_or_director, writers, cast,
+            poster_link, mediainfo_output, screenshot_links,
+            media_type == 'movie', episode_info, imdb_id
+        )
 
-        output_filename = sanitize_filename(title) + ".txt"
+        bbcode_folder = os.path.join(os.path.dirname(__file__), 'bbcode')
+        os.makedirs(bbcode_folder, exist_ok=True)
+        output_filename = os.path.join(bbcode_folder, sanitize_filename(title) + ".txt")
         with open(output_filename, 'w', encoding='utf-8') as f:
             f.write(bbcode)
-
         print(f"BBCode saved to {output_filename}")
+
+        last_folder_name = os.path.basename(os.path.normpath(video_folder))
+        if media_type == 'movie':
+            output_path = rf"\\TOWER\seed\incoming\_torrent_cache\speed\movies\{last_folder_name}.torrent"
+        else:
+            output_path = rf"\\TOWER\seed\incoming\_torrent_cache\speed\tv\{last_folder_name}.torrent"
+
+        createtorrent_cmd = [
+            "python", "createtorrent.py", "-P", "--announce",
+            "<Tracker Announce URL>",
+            video_folder, "--output", output_path
+        ]
+        print("Running createtorrent.py...")
+        subprocess.run(createtorrent_cmd, check=True)
+        print("createtorrent.py finished successfully!")
 
     except Exception as e:
         print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
-
