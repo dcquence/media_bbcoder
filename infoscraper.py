@@ -1,6 +1,6 @@
 # Media Info BBCode Generator for Uploads
 # Gathers info from TMDb and Mediainfo, and calls imgs.py to upload screenshots and poster
-# Written by dcquence
+# Written by dcquence 2024, modified to use imgs.py and include IMDb link
 
 import ctypes
 try:
@@ -106,9 +106,18 @@ def select_video_file():
 def create_screenshots(video_path):
     screenshots_folder = os.path.join(os.path.dirname(__file__), 'screenshots')
     os.makedirs(screenshots_folder, exist_ok=True)
-    duration = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
-                                     '-of', 'default=noprint_wrappers=1:nokey=1', video_path],
-                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout)
+
+    import re
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+         '-of', 'default=noprint_wrappers=1:nokey=1', video_path],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+    match = re.search(r'(\d+\.\d+)', result.stdout)
+    if not match:
+        raise ValueError(f"Could not parse duration from ffprobe output: {result.stdout}")
+    duration = float(match.group(1))
+
     start_time = 5 * 60
     screenshot_interval = 5 * 60
     max_screenshots = 4
@@ -149,7 +158,7 @@ def main():
             return
 
         tmdb_id = input("Enter TMDB ID: ")
-        api_key = "<Your API Key"
+        api_key = "<Your_TMDB_Key"
 
         video_path = select_video_file()
         video_folder = os.path.dirname(video_path)
@@ -216,7 +225,7 @@ def main():
 
         createtorrent_cmd = [
             "python", "createtorrent.py", "-P", "--announce",
-            "<Tracker Announce URL>",
+            "https://speed.connecting.center/b180195da10f22531cb88bf6dbc80fc7/announce",
             video_folder, "--output", output_path
         ]
         print("Running createtorrent.py...")
